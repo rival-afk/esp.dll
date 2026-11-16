@@ -13,6 +13,8 @@ signal closed
 @onready var close_btn: Button = %CloseButton
 
 var _vm: Node = null
+# проверка «есть ли плата на столе» (подписывается извне, из interact.gd)
+var board_check: Callable = Callable()
 
 const DEFAULT_CODE := """void setup() {
   pinMode(13, OUTPUT);
@@ -47,6 +49,10 @@ func set_vm_active(on: bool) -> void:
 	_vm.stop()
 
 func _on_upload() -> void:
+	if board_check.is_valid() and not board_check.call():
+		out_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.25, 1))
+		out_label.text = "На столе нет платы — возьми ATmega328P из каталога (TAB / зум на шкаф)"
+		return
 	out_label.add_theme_color_override("font_color", Color(0.72, 0.66, 0.55, 1))
 	var err: String = _vm.load_and_run(code_edit.text)
 	if err == "":

@@ -31,11 +31,20 @@ const PICK_R := 0.013        # радиус попадания луча в пи�
 const WIRE_T := 0.0015       # толщина провода (1.5 мм)
 const PARTS_GLB_DIR := "res://Models/parts/"
 
+# OBJ-модели реальных компонентов (конвертация из Sketchfab, Downloads/models)
+const PARTS_OBJ := {
+	"ic_atmega": "res://Models/parts/arduino/arduino_uno_r3.obj",
+	"ic_esp32": "res://Models/parts/esp32/esp32_devkitc_v4.obj",
+	"bread830": "res://Models/parts/protoboard/protoboard_830.obj",
+	"multimeter": "res://Models/parts/multimeter/multimeter_ms8321b.obj",
+}
+
 # реальные габариты для скачанных моделей (м)
 const TARGET_SIZE := {
 	"psu5v": Vector3(0.10, 0.07, 0.07), "lcd1602": Vector3(0.08, 0.016, 0.036),
 	"bread830": Vector3(0.165, 0.02, 0.055), "ic_atmega": Vector3(0.09, 0.016, 0.02),
 	"ic_esp32": Vector3(0.055, 0.012, 0.028), "s_hcsr04": Vector3(0.045, 0.016, 0.025),
+	"multimeter": Vector3(0.09, 0.04, 0.185),
 }
 
 var parts := []   # {pid, catalog_id, name, root, glow_mat, sim, comp_id, pins, aabb, yaw}
@@ -148,9 +157,15 @@ func _build_panel() -> void:
 	_title_label.add_theme_font_size_override("font_size", 16)
 	_title_label.add_theme_color_override("font_color", Color(1, 0.82, 0.58, 1))
 	vb.add_child(_title_label)
+	# список деталей в скролле: не вылезает за нижнюю границу при 10/10
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(0, 236)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vb.add_child(sc)
 	_list_box = VBoxContainer.new()
 	_list_box.add_theme_constant_override("separation", 4)
-	vb.add_child(_list_box)
+	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(_list_box)
 
 func _rebuild_panel() -> void:
 	if _title_label == null:
@@ -299,6 +314,12 @@ func _build_visual(catalog_id: String) -> Dictionary:
 			sz = a.size
 		return {"node": wrap, "glow_mat": null, "size": sz,
 			"pin_span": sz.x * 0.5 + 0.004}
+	var obj := _load_obj(catalog_id, target)
+	if obj != null:
+		var wrap2 := Node3D.new()
+		wrap2.add_child(obj)
+		return {"node": wrap2, "glow_mat": null, "size": target,
+			"pin_span": target.x * 0.5 + 0.004}
 	return _procedural_visual(catalog_id)
 
 func _load_glb(catalog_id: String, target: Vector3) -> Node3D:
@@ -319,6 +340,27 @@ func _load_glb(catalog_id: String, target: Vector3) -> Node3D:
 		-a.position.y * s,
 		-(a.position.z + a.size.z * 0.5) * s)
 	return inst
+
+# OBJ-модель реального компонента: приводим к реальным габаритам TARGET_SIZE
+func _load_obj(catalog_id: String, target: Vector3) -> MeshInstance3D:
+	var path: String = PARTS_OBJ.get(catalog_id, "")
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	var mesh: Mesh = load(path)
+	if mesh == null:
+		return null
+	var a := mesh.get_aabb()
+	if a.size.x <= 0.0:
+		return null
+	var s: float = minf(target.x / a.size.x, minf(target.y / a.size.y, target.z / a.size.z))
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.scale = Vector3.ONE * s
+	mi.position = Vector3(
+		-(a.position.x + a.size.x * 0.5) * s,
+		-a.position.y * s,
+		-(a.position.z + a.size.z * 0.5) * s)
+	return mi
 
 func _scene_aabb(n: Node3D) -> AABB:
 	var out := AABB()
@@ -738,6 +780,10 @@ func get_arduino() -> Dictionary:
 		if p["catalog_id"] == "ic_atmega" and p["comp_id"] != "":
 			return p
 	return {}
+
+# есть ли на столе программируемая плата
+func has_arduino() -> bool:
+	return not get_arduino().is_empty()
 
 func circuit_task_done() -> bool:
 	# задание чертежа: любой светодиод на столе горит

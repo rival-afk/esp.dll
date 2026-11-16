@@ -61,6 +61,10 @@ func _build() -> void:
 		name_l.text = entry["name"]
 		name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		name_l.add_theme_font_size_override("font_size", 16)
+		# две строки максимум: высота фиксирована, лишнее не вылезает за карточку
+		name_l.custom_minimum_size = Vector2(0, 44)
+		name_l.clip_contents = true
+		name_l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		var cat_l := Label.new()
 		cat_l.text = entry["category"]
 		cat_l.add_theme_font_size_override("font_size", 12)

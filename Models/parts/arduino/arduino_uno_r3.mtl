@@ -1,0 +1,221 @@
+# materials for arduino uno r3
+newmtl uno_top
+Kd 1.000 1.000 1.000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd textures/uno_top.png
+
+newmtl uno_bottom
+Kd 1.000 1.000 1.000
+Ks 0.05 0.05 0.05
+Ns 10
+map_Kd textures/uno_bottom.png
+
+newmtl pcb_edge
+Kd 0.141 0.353 0.596
+map_Kd textures/t_pcb_edge.png
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl M_47uf_CAP_Dcase
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_47uf_CAP_Dcase.png
+
+newmtl M_USB_SHELL
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_usb_shell_USB_SHELL.png
+
+newmtl M_USB_core
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_usb_core_USB_core.png
+
+newmtl M_usb_top_contact
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_gold_usb_top_contact.png
+
+newmtl M_usb_btm_contact
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_gold_usb_btm_contact.png
+
+newmtl M_power_jack
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_power_jack.png
+
+newmtl M_crystal
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_crystal.png
+
+newmtl M_2pin_header__02
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_2pin_header__02.png
+
+newmtl M_nano___reg
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_nano___reg.png
+
+newmtl M_led
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_led.png
+newmtl socket_black
+Kd 0.055 0.055 0.060
+map_Kd textures/t_socket_black.png
+Ks 0.1 0.1 0.1
+Ns 20
+
+newmtl M_dip_socket_pin
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_gold_dip_socket_pin.png
+
+newmtl M_atmega16u2
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_atmega16u2.png
+
+newmtl M_8_PORT_HEADER
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_8_PORT_HEADER.png
+
+newmtl M_6_PORT_HEADER
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_6_PORT_HEADER.png
+
+newmtl M_10_PORT_HEADER
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_10_PORT_HEADER.png
+
+newmtl M_ATMEL328P
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_ATMEL328P.png
+
+newmtl M_102_RESISTOR_PACK
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_102_RESISTOR_PACK.png
+
+newmtl M_103_RESISTOR_PACK
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_103_RESISTOR_PACK.png
+
+newmtl M_220_RESISTOR_PACK
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_220_RESISTOR_PACK.png
+
+newmtl M_16mhz_crystal___measured
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_16mhz_crystal___measured.png
+
+newmtl M_PADS001
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_gold_PADS001.png
+
+newmtl M_603_cap_on_pad
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_603_cap_on_pad.png
+
+newmtl M_ssot3
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_ssot3.png
+
+newmtl M_mf_msmf050_2
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_mf_msmf050_2.png
+
+newmtl M_lmv358
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_lmv358.png
+
+newmtl M_lp2985dgkr
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_lp2985dgkr.png
+
+newmtl M_cd1206_diode
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_cd1206_diode.png
+
+newmtl M_603_resistor
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_603_resistor.png
+
+newmtl M_blm21
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_blm21.png
+
+newmtl M_m7_diode
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_m7_diode.png
+
+newmtl M_MLC0603
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_MLC0603.png
+
+newmtl M_RESET_CORE
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_reset_core_RESET_CORE.png
+
+newmtl M_RESET
+Kd 1.000 1.000 1.000
+Ks 0.10 0.10 0.10
+Ns 30
+map_Kd textures/t_RESET.png

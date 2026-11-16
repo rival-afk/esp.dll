@@ -47,6 +47,7 @@ var busy := false
 # HUD задания (6.1 mini): цель уровня + подсказки клавиш
 var hud_task: Label
 var hud_hint: Label
+var hud_panel: PanelContainer
 # fly state
 var fly_p0 := Vector3.ZERO
 var fly_t0 := Vector3.ZERO
@@ -59,6 +60,8 @@ var fly_up := Vector3.UP
 var mouse_pos := Vector2(-1, -1)
 var _follow := Vector2.ZERO  # radians (x=yaw, y=pitch)
 var _base_tr := Transform3D.IDENTITY
+# проекцию камеры меняем в конце пролёта (0 — не менять, 1 — ortho, 2 — persp)
+var _pending_proj := 0
 
 func _ready() -> void:
 	cam = find_child("Camera3D", true) as Camera3D
@@ -81,6 +84,7 @@ func _ready() -> void:
 		parts_list.visibility_changed.connect(_on_catalog_visibility)
 	if code_editor != null and bench != null:
 		code_editor.connect_pin_handler(bench.set_arduino_pin)
+		code_editor.board_check = bench.has_arduino
 	if blueprint != null:
 		blueprint.provider = circuit_task_done
 	paper_hl_mat = StandardMaterial3D.new()
@@ -213,6 +217,8 @@ func _set_screen(on: bool) -> void:
 	if mi == null:
 		return
 	var mat := StandardMaterial3D.new()
+	mat.grow = true
+	mat.grow_amount = 0.0008   # сдвиг к зрителю: убирает z-файтинг со стеклом корпуса
 	if on:
 		# textured glow independent of scene lighting
 		mat.albedo_color = Color(0.04, 0.04, 0.04)
@@ -268,6 +274,8 @@ func _fly_step(k: float) -> void:
 func _fly_done() -> void:
 	busy = false
 	_base_tr = cam.global_transform
+	_follow = Vector2.ZERO
+	_apply_projection()
 	# после зума на шкаф сразу открываем каталог деталей
 	if mode == "parts" and parts_list != null and not parts_list.visible:
 		parts_list.visible = true
@@ -292,6 +300,18 @@ func _fly(pos: Vector3, trg: Vector3, dur: float = fly_duration, up_hint := Vect
 	tw.tween_method(_fly_step, 0.0, 1.0, dur) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.finished.connect(_fly_done)
+
+# проекцию камеры меняем только после пролёта — иначе вид «дёргается» на стыке
+func _apply_projection() -> void:
+	if cam == null or _pending_proj == 0:
+		return
+	if _pending_proj == 1:
+		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+		cam.size = 0.22
+	elif _pending_proj == 2:
+		cam.projection = Camera3D.PROJECTION_PERSPECTIVE
+		cam.fov = 65.0
+	_pending_proj = 0
 
 func _on_part_selected(part_id: String) -> void:
 	# клик по карточке каталога -> деталь автоматически появляется на столе
@@ -337,25 +357,17 @@ func _zoom(zone: String) -> void:
 	var pose = poses[zone]
 	_hide_overlays()
 	if cam != null:
-		if zone == "bench":
-			# ортографический вид сверху для сборки (близкий зум под реальные детали)
-			cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-			cam.size = 0.22
-			_fly(pose[0], pose[1], fly_duration, Vector3(0, 0, -1))
-		else:
-			if cam.projection != Camera3D.PROJECTION_PERSPECTIVE:
-				cam.projection = Camera3D.PROJECTION_PERSPECTIVE
-				cam.fov = 65.0
-			_fly(pose[0], pose[1])
+		# проекцию меняем только в конце пролёта — не «дёргает» камеру
+		_pending_proj = 1 if zone == "bench" else 2
+		_fly(pose[0], pose[1], fly_duration, Vector3(0, 0, -1) if zone == "bench" else Vector3.UP)
 	if zone != "bench" and bench != null:
 		bench.set_active(false)
 
 func _back() -> void:
 	mode = ""
 	_hide_overlays()
-	if cam != null and cam.projection != Camera3D.PROJECTION_PERSPECTIVE:
-		cam.projection = Camera3D.PROJECTION_PERSPECTIVE
-		cam.fov = 65.0
+	if cam != null:
+		_pending_proj = 2
 	_fly(overview_pos, overview_trg)
 	if bench != null:
 		bench.set_active(false)
@@ -392,15 +404,19 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE \
 			and parts_list != null and parts_list.visible:
-		_toggle_parts()
+		_toggle_parts()   # сам вернёт камеру, если зумились на шкаф
 		return
 	if e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE \
 			and code_editor != null and code_editor.visible:
 		code_editor._on_close()
+		if mode == "pc":
+			_back()   # один ESC закрывает редактор и отводит камеру
 		return
 	if e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE \
 			and blueprint != null and blueprint.visible:
 		blueprint.visible = false
+		if mode == "papers":
+			_back()   # один ESC закрывает чертёж и отводит камеру
 		return
 	if busy:
 		return
@@ -410,22 +426,23 @@ func _unhandled_input(e: InputEvent) -> void:
 			_apply_hover(_hover_hit(e.position))
 		elif mode == "bench" and bench != null:
 			bench.on_motion(cam.global_position, cam.project_ray_normal(e.position))
-	elif e is InputEventMouseButton and e.pressed:
+	elif e is InputEventMouseButton:
+		var press: bool = e.pressed
 		if mode == "":
-			if e.button_index == MOUSE_BUTTON_LEFT and hover != "":
+			if press and e.button_index == MOUSE_BUTTON_LEFT and hover != "":
 				var z := hover
 				_apply_hover("")
 				_zoom(z)
 		elif mode == "bench":
 			if e.button_index == MOUSE_BUTTON_LEFT and bench != null:
-				if e.pressed:
+				if press:
 					bench.on_click(cam.global_position, cam.project_ray_normal(e.position))
 				else:
 					bench.end_drag(cam.global_position, cam.project_ray_normal(e.position))
-			elif e.button_index == MOUSE_BUTTON_RIGHT and e.pressed:
+			elif press and e.button_index == MOUSE_BUTTON_RIGHT:
 				_back()
 		else:
-			if e.button_index == MOUSE_BUTTON_RIGHT or e.button_index == MOUSE_BUTTON_LEFT:
+			if press and (e.button_index == MOUSE_BUTTON_RIGHT or e.button_index == MOUSE_BUTTON_LEFT):
 				_back()
 	elif e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE and mode != "":
 		_back()
@@ -461,15 +478,27 @@ func _build_hud() -> void:
 	panel.add_child(vb)
 	layer.add_child(panel)
 	panel.position = Vector2(16, 16)
+	hud_panel = panel
+	# HUD не должен ловить мышь и мешать кликам по игре
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_task.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _update_hud() -> void:
+	if hud_panel == null:
+		return
+	# HUD виден только на общем плане без открытых окон — не заслоняет UI
+	hud_panel.visible = mode == "" \
+		and not (parts_list != null and parts_list.visible) \
+		and not (code_editor != null and code_editor.visible) \
+		and not (blueprint != null and blueprint.visible)
 	if hud_task == null:
 		return
 	if circuit_task_done():
 		hud_task.text = "Задание выполнено ✓  LED горит"
 		hud_task.add_theme_color_override("font_color", Color(0.55, 0.85, 0.5))
 	else:
-		hud_task.text = "Задание: соберите цепь 5 В → 220 Ом → LED\n(чертёж — на бумагах слева; каталог — зум на шкаф)"
+		hud_task.text = "Задание «Светофор»: зажги светодиод\n(пин платы → резистор 220 Ом → LED → GND; чертёж — на бумагах)"
 		hud_task.remove_theme_color_override("font_color")
 
 # автоскриншоты: GODOT_SHOT=1 godot --path . res://game.tscn
@@ -529,9 +558,10 @@ func _verify(v: String) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	print("ZONES ", zone_boxes)
+	var task0 := "Задание «Светофор»: зажги светодиод\n(пин платы → резистор 220 Ом → LED → GND; чертёж — на бумагах)"
 	if v == "hud":
-		var ok_hud: bool = hud_task != null and hud_task.text.begins_with("Задание") \
-			and hud_hint != null
+		var ok_hud: bool = hud_task != null and hud_task.text == task0 \
+			and hud_hint != null and hud_panel != null and hud_panel.visible
 		print("VERIFY-OK hud task=%s" % ok_hud)
 		get_tree().quit()
 		return
