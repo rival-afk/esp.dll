@@ -23,52 +23,57 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("sb_backdrop")
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Panel" type="PanelContainer" parent="."]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 13
+anchor_left = 0.0
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="Panel" type="PanelContainer" parent="Center"]
-layout_mode = 2
 theme_override_styles/panel = SubResource("sb_backdrop")
 
-[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+[node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Center/Panel/VBox"]
+[node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.58, 1)
-theme_override_font_sizes/font_size = 20
-text = "Arduino — редактор кода"
+theme_override_font_sizes/font_size = 24
+text = "Редактор кода"
 
-[node name="CodeEdit" type="TextEdit" parent="Center/Panel/VBox"]
+[node name="CodeEdit" type="TextEdit" parent="Panel/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(560, 340)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_font_sizes/font_size = 15
 
-[node name="OutLabel" type="Label" parent="Center/Panel/VBox"]
+[node name="OutLabel" type="Label" parent="Panel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.66, 0.55, 1)
 theme_override_font_sizes/font_size = 14
 text = ""
 
-[node name="BtnRow" type="HBoxContainer" parent="Center/Panel/VBox"]
+[node name="BtnRow" type="HBoxContainer" parent="Panel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 2
 
-[node name="CloseButton" type="Button" parent="Center/Panel/VBox/BtnRow"]
+[node name="CloseButton" type="Button" parent="Panel/VBox/BtnRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Закрыть"
 
-[node name="UploadButton" type="Button" parent="Center/Panel/VBox/BtnRow"]
+[node name="UploadButton" type="Button" parent="Panel/VBox/BtnRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Загрузить на плату"

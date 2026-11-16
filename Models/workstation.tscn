@@ -1407,7 +1407,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.799673, 1.0162952, 0.451443
 mesh = SubResource("ArrayMesh_d21qr")
 
 [node name="Black Lamp_002" type="MeshInstance3D" parent="." unique_id=732017516]
-transform = Transform3D(-0.8056387, 0, 0.5924073, 0, 1, 0, -0.5924073, 0, -0.8056387, 0.49711645, 0.72993624, 0.13655877)
+transform = Transform3D(-0.8056387, 0, 0.5924073, 0, 1, 0, -0.5924073, 0, -0.8056387, 0.49711645, 0.72993624, 0.25)
 mesh = SubResource("ArrayMesh_8gfko")
 
 [node name="Binder_001" type="MeshInstance3D" parent="." unique_id=1892919599]

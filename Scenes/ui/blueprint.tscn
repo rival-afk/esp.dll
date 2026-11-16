@@ -1,7 +1,6 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://Scripts/ui/blueprint.gd" id="1_bp"]
-[ext_resource type="Texture2D" path="res://Textures/blueprint_l1.png" id="2_l1"]
 
 [sub_resource type="StyleBoxFlat" id="sb_panel"]
 content_margin_left = 16.0
@@ -53,8 +52,8 @@ anchor_top = 1.0
 anchor_right = 0.0
 anchor_bottom = 1.0
 offset_left = 16.0
-offset_right = 470.0
-offset_top = -580.0
+offset_right = 462.0
+offset_top = -440.0
 offset_bottom = -24.0
 grow_vertical = 0
 theme_override_styles/panel = SubResource("sb_panel")
@@ -69,20 +68,17 @@ theme_override_colors/font_color = Color(1, 0.82, 0.58, 1)
 theme_override_font_sizes/font_size = 20
 text = "Чертёж №1: светодиод"
 
-[node name="Schematic" type="TextureRect" parent="Panel/VBox"]
+[node name="Schematic" type="Control" parent="Panel/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(422, 352)
+custom_minimum_size = Vector2(420, 210)
 layout_mode = 2
-texture = ExtResource("2_l1")
-expand_mode = 1
-stretch_mode = 5
 
 [node name="Task" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.87, 0.83, 0.76, 1)
 theme_override_font_sizes/font_size = 15
-text = "Собери на столе цепь по монтажной схеме: плата, резистор 220 Ом
-и светодиод, соединённые проводами в кольцо."
+text = "Собери на столе цепь по схеме: Arduino, резистор 220 Ом
+и светодиод, соединённые проводами в кольцо (13 → LED → GND)."
 autowrap_mode = 2
 
 [node name="StatusLabel" type="Label" parent="Panel/VBox"]

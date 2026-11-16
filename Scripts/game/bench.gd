@@ -27,7 +27,7 @@ const SLOTS_PER_ROW := 5
 const ROWS := 2
 const MAX_PARTS := SLOTS_PER_ROW * ROWS
 const LEAD_Y := 0.004        # высота выводов и пинов (4 мм над столом)
-const PICK_R := 0.013        # радиус попадания луча в пин
+const PICK_R := 0.006   # радиус захвата луча за пин (6 мм — не съедает корпус мелких деталей)
 const WIRE_T := 0.0015       # толщина провода (1.5 мм)
 const PARTS_GLB_DIR := "res://Models/parts/"
 

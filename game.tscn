@@ -64,7 +64,7 @@ shadow_blur = 1.6
 directional_shadow_max_distance = 10.0
 
 [node name="DeskLampGlow" type="OmniLight3D" parent="." unique_id=1769285214]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.47, 1.22, 0.17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.47, 1.22, 0.28)
 light_color = Color(1, 0.7, 0.38, 1)
 light_energy = 1.2
 omni_range = 2.4
