@@ -14,6 +14,8 @@ func _ready() -> void:
 	var v := OS.get_environment("GODOT_VERIFY")
 	if v != "":
 		call_deferred("_verify", v)
+	if OS.get_environment("GODOT_SHOT") != "":
+		call_deferred("_shot")
 
 func _on_play() -> void:
 	var tree := get_tree()
@@ -34,3 +36,11 @@ func _verify(v: String) -> void:
 		get_tree().quit()
 	elif v == "menu_play":
 		play_button.pressed.emit()
+
+func _shot() -> void:
+	for i in 30:
+		await get_tree().process_frame
+	var img := get_viewport().get_texture().get_image()
+	img.save_png(ProjectSettings.globalize_path("res://Screenshots/auto_menu.png"))
+	print("SHOTS-DONE")
+	get_tree().quit()

@@ -44,6 +44,9 @@ var poses := {
 var mode := ""   # "" overview, else zoomed-in zone
 var hover := ""
 var busy := false
+# HUD задания (6.1 mini): цель уровня + подсказки клавиш
+var hud_task: Label
+var hud_hint: Label
 # fly state
 var fly_p0 := Vector3.ZERO
 var fly_t0 := Vector3.ZERO
@@ -99,8 +102,12 @@ func _ready() -> void:
 	var v := OS.get_environment("GODOT_VERIFY")
 	if v != "":
 		call_deferred("_verify", v)
+	_build_hud()
+	if OS.get_environment("GODOT_SHOT") != "":
+		call_deferred("_shot")
 
 func _process(delta: float) -> void:
+	_update_hud()
 	if cam == null or busy:
 		return
 	# в зуме на экран ПК слежение отключено — экран должен занимать весь кадр
@@ -425,12 +432,109 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE:
 		_return_to_menu()
 
+# ---------------------------------------------------------------- hud / shots
+
+# 6.1 (mini): HUD с целью уровня и подсказками; гаснет, когда задание выполнено
+func _build_hud() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "TaskHUD"
+	add_child(layer)
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.07, 0.06, 0.045, 0.82)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_right = 12.0
+	style.content_margin_bottom = 8.0
+	panel.add_theme_stylebox_override("panel", style)
+	var vb := VBoxContainer.new()
+	hud_task = Label.new()
+	hud_task.text = "Задание: соберите цепь 5 В → 220 Ом → LED\n(чертёж — на бумагах слева)"
+	hud_task.add_theme_font_size_override("font_size", 15)
+	hud_hint = Label.new()
+	hud_hint.text = "ЛКМ по зоне — подойти · TAB/P — каталог · ЛКМ пин→пин — провод\nR — поворот детали · ПКМ/ESC — назад · ESC на общем плане — меню"
+	hud_hint.add_theme_font_size_override("font_size", 12)
+	hud_hint.modulate = Color(1, 0.9, 0.75, 0.85)
+	vb.add_child(hud_task)
+	vb.add_child(hud_hint)
+	panel.add_child(vb)
+	layer.add_child(panel)
+	panel.position = Vector2(16, 16)
+
+func _update_hud() -> void:
+	if hud_task == null:
+		return
+	if circuit_task_done():
+		hud_task.text = "Задание выполнено ✓  LED горит"
+		hud_task.add_theme_color_override("font_color", Color(0.55, 0.85, 0.5))
+	else:
+		hud_task.text = "Задание: соберите цепь 5 В → 220 Ом → LED\n(чертёж — на бумагах слева; каталог — зум на шкаф)"
+		hud_task.remove_theme_color_override("font_color")
+
+# автоскриншоты: GODOT_SHOT=1 godot --path . res://game.tscn
+func _save_shot(path: String) -> void:
+	var img := get_viewport().get_texture().get_image()
+	img.save_png(ProjectSettings.globalize_path(path))
+	print("SHOT saved ", path)
+
+# ждём окончания полёта камеры и (опц.) открытия оверлея — максимум ~3 с
+func _wait_ready(extra_visible: Node = null) -> void:
+	var frames := 0
+	while frames < 400:
+		var ready := not busy
+		if extra_visible != null:
+			ready = ready and extra_visible.visible
+		if ready:
+			break
+		await get_tree().process_frame
+		frames += 1
+	for i in 12:
+		await get_tree().process_frame
+
+func _shot() -> void:
+	await _wait_ready()
+	_save_shot("res://Screenshots/auto_overview.png")
+	# экран ПК + редактор кода
+	_zoom("pc")
+	_set_screen(true)
+	await _wait_ready(code_editor)
+	_save_shot("res://Screenshots/auto_pc.png")
+	# чертёж на бумагах (открывается сам в _fly_done)
+	_zoom("papers")
+	await _wait_ready(blueprint)
+	_save_shot("res://Screenshots/auto_blueprint.png")
+	# сборка: собранная цепь в редакторе (вид сверху)
+	if bench != null:
+		bench.set_active(true)
+		var board: String = bench.place_part("ic_atmega")
+		var res: String = bench.place_part("r220")
+		var led: String = bench.place_part("led_red")
+		bench.connect_pins(board + ":L", res + ":L")
+		bench.connect_pins(res + ":R", led + ":L")
+		bench.connect_pins(led + ":R", board + ":R")
+	_zoom("bench")
+	await _wait_ready()
+	_save_shot("res://Screenshots/auto_bench.png")
+	# каталог деталей (открывается сам после зума на шкаф)
+	_zoom("parts")
+	await _wait_ready(parts_list)
+	_save_shot("res://Screenshots/auto_catalog.png")
+	print("SHOTS-DONE")
+	get_tree().quit()
+
 # ---------------------------------------------------------------- verify
 
 func _verify(v: String) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	print("ZONES ", zone_boxes)
+	if v == "hud":
+		var ok_hud: bool = hud_task != null and hud_task.text.begins_with("Задание") \
+			and hud_hint != null
+		print("VERIFY-OK hud task=%s" % ok_hud)
+		get_tree().quit()
+		return
 	if v == "back_to_menu":
 		_return_to_menu()
 		return
