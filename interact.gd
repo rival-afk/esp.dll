@@ -558,9 +558,14 @@ func _verify(v: String) -> void:
 	var zone := v.substr(v.find("_") + 1)
 	if v.begins_with("zoom_"):
 		var pose = poses[zone]
-		cam.global_transform = Transform3D(Basis.looking_at(pose[1] - pose[0], Vector3.UP), pose[0])
-		cam_target = pose[1]
 		mode = zone
+		if zone == "bench":
+			# та же ортопроекция и up, что и в игре: looking_at с Vector3.UP
+			# для взгляда строго вниз даёт вырожденный базис
+			_snap_bench(pose[0], pose[1])
+		else:
+			cam.global_transform = Transform3D(Basis.looking_at(pose[1] - pose[0], Vector3.UP), pose[0])
+			cam_target = pose[1]
 	if zone == "pc":
 		_set_screen(true)
 	elif zone == "papers":

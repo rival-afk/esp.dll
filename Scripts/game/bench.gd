@@ -39,12 +39,13 @@ const PARTS_OBJ := {
 	"multimeter": "res://Models/parts/multimeter/multimeter_ms8321b.obj",
 }
 
-# реальные габариты для скачанных моделей (м)
+# реальные габариты деталей (м): X — ширина, Y — высота, Z — глубина
 const TARGET_SIZE := {
 	"psu5v": Vector3(0.10, 0.07, 0.07), "lcd1602": Vector3(0.08, 0.016, 0.036),
-	"bread830": Vector3(0.165, 0.02, 0.055), "ic_atmega": Vector3(0.09, 0.016, 0.02),
-	"ic_esp32": Vector3(0.055, 0.012, 0.028), "s_hcsr04": Vector3(0.045, 0.016, 0.025),
-	"multimeter": Vector3(0.09, 0.04, 0.185),
+	"bread830": Vector3(0.165, 0.010, 0.055),
+	"ic_atmega": Vector3(0.069, 0.019, 0.053), "ic_esp32": Vector3(0.055, 0.012, 0.028),
+	"s_hcsr04": Vector3(0.045, 0.016, 0.025),
+	"multimeter": Vector3(0.185, 0.04, 0.09),
 }
 
 var parts := []   # {pid, catalog_id, name, root, glow_mat, sim, comp_id, pins, aabb, yaw}
@@ -146,8 +147,10 @@ func _build_panel() -> void:
 	sb.set_corner_radius_all(3)
 	sb.set_content_margin_all(12)
 	_panel.add_theme_stylebox_override("panel", sb)
-	_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 14)
+	# нижний правый угол: вверху справа панель перекрывала слоты верхнего ряда
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 14)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.visible = false
 	add_child(_panel)
 	var vb := VBoxContainer.new()
@@ -157,9 +160,9 @@ func _build_panel() -> void:
 	_title_label.add_theme_font_size_override("font_size", 16)
 	_title_label.add_theme_color_override("font_color", Color(1, 0.82, 0.58, 1))
 	vb.add_child(_title_label)
-	# список деталей в скролле: не вылезает за нижнюю границу при 10/10
+	# список деталей в скролле: компактно, не залезает на сетку слотов
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(0, 236)
+	sc.custom_minimum_size = Vector2(0, 110)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vb.add_child(sc)
 	_list_box = VBoxContainer.new()
@@ -308,19 +311,21 @@ func _build_visual(catalog_id: String) -> Dictionary:
 	if glb != null:
 		var wrap := Node3D.new()
 		wrap.add_child(glb)
-		var sz := target
-		var a := _scene_aabb(glb)
-		if a.size.x > 0:
-			sz = a.size
-		return {"node": wrap, "glow_mat": null, "size": sz,
-			"pin_span": sz.x * 0.5 + 0.004}
+		return _visual_result(wrap, target)
 	var obj := _load_obj(catalog_id, target)
 	if obj != null:
 		var wrap2 := Node3D.new()
 		wrap2.add_child(obj)
-		return {"node": wrap2, "glow_mat": null, "size": target,
-			"pin_span": target.x * 0.5 + 0.004}
+		return _visual_result(wrap2, target)
 	return _procedural_visual(catalog_id)
+
+# размер/пины считаем по фактическому AABB собранной модели, а не по target:
+# иначе пины уезжают за края модели с нестандартными осями
+func _visual_result(node: Node3D, fallback: Vector3) -> Dictionary:
+	var a := _scene_aabb(node)
+	var sz := a.size if a.size.x > 0.0001 else fallback
+	return {"node": node, "glow_mat": null, "size": sz,
+		"pin_span": sz.x * 0.5 + 0.004}
 
 func _load_glb(catalog_id: String, target: Vector3) -> Node3D:
 	var path := PARTS_GLB_DIR + catalog_id + ".glb"
@@ -341,7 +346,11 @@ func _load_glb(catalog_id: String, target: Vector3) -> Node3D:
 		-(a.position.z + a.size.z * 0.5) * s)
 	return inst
 
-# OBJ-модель реального компонента: приводим к реальным габаритам TARGET_SIZE
+# OBJ-модель реального компонента: приводим к реальным габаритам TARGET_SIZE.
+# Модели из Sketchfab приходят в разных осях (Arduino/ESP32 стоят в плоскости XY,
+# макетка и мультиметр уже лежат), поэтому самую тонкую ось разворачиваем вверх,
+# а масштаб считаем по длинной горизонтальной стороне. Раньше масштаб ограничивался
+# «высотой» 16 мм и плата сжималась до ~2 см.
 func _load_obj(catalog_id: String, target: Vector3) -> MeshInstance3D:
 	var path: String = PARTS_OBJ.get(catalog_id, "")
 	if path == "" or not ResourceLoader.exists(path):
@@ -352,29 +361,53 @@ func _load_obj(catalog_id: String, target: Vector3) -> MeshInstance3D:
 	var a := mesh.get_aabb()
 	if a.size.x <= 0.0:
 		return null
-	var s: float = minf(target.x / a.size.x, minf(target.y / a.size.y, target.z / a.size.z))
+	var rot := _flatten_basis(a.size)
+	var flat: AABB = Transform3D(rot, Vector3.ZERO) * a
+	# длинную горизонтальную сторону кладём вдоль X, как в TARGET_SIZE:
+	# иначе макетка 830 (16.5 см) встаёт поперёк глубины сетки (14 см)
+	if target.x > target.z and flat.size.z > flat.size.x:
+		rot = Basis(Vector3.UP, PI / 2.0) * rot
+		flat = Transform3D(rot, Vector3.ZERO) * a
+	elif target.z > target.x and flat.size.x > flat.size.z:
+		rot = Basis(Vector3.UP, PI / 2.0) * rot
+		flat = Transform3D(rot, Vector3.ZERO) * a
+	var want := maxf(target.x, target.z)
+	var have := maxf(flat.size.x, flat.size.z)
+	var s := 1.0
+	if have > 0.0001:
+		s = want / have
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
-	mi.scale = Vector3.ONE * s
+	mi.basis = rot.scaled(Vector3.ONE * s)
 	mi.position = Vector3(
-		-(a.position.x + a.size.x * 0.5) * s,
-		-a.position.y * s,
-		-(a.position.z + a.size.z * 0.5) * s)
+		-(flat.position.x + flat.size.x * 0.5) * s,
+		-flat.position.y * s,
+		-(flat.position.z + flat.size.z * 0.5) * s)
 	return mi
 
-func _scene_aabb(n: Node3D) -> AABB:
+# ориентация «на стол»: самая тонкая ось модели становится вертикальной (Y)
+func _flatten_basis(sz: Vector3) -> Basis:
+	if sz.y <= sz.x and sz.y <= sz.z:
+		return Basis()                                  # уже лежит
+	if sz.z <= sz.x:
+		return Basis(Vector3.RIGHT, -PI / 2.0)          # Z -> Y
+	return Basis(Vector3.BACK, PI / 2.0)                # X -> Y
+
+func _scene_aabb(n: Node, xform := Transform3D.IDENTITY) -> AABB:
 	var out := AABB()
 	var found := false
 	for c in n.get_children():
+		var t := xform
+		if c is Node3D:
+			t = xform * c.transform
 		if c is MeshInstance3D:
-			var ab: AABB = c.transform * c.get_aabb()
+			var ab: AABB = t * c.get_aabb()
 			out = ab if not found else out.merge(ab)
 			found = true
-		else:
-			var sub := _scene_aabb(c)
-			if sub.size.x > 0:
-				out = sub if not found else out.merge(sub)
-				found = true
+		var sub := _scene_aabb(c, t)
+		if sub.size.length_squared() > 0.0:
+			out = sub if not found else out.merge(sub)
+			found = true
 	return out
 
 # --- примитивы-хелперы ---
@@ -709,12 +742,15 @@ func _wire_basis(dir: Vector3) -> Basis:
 	if d.length() < 1e-6:
 		return Basis()
 	var dn := d / d.length()
+	# длинная ось бруса провода — локальная Z, поэтому Z должен смотреть вдоль
+	# провода (раньше направление клалось на Y: брус вставал вертикально и в
+	# виде сверху провода были не видны)
 	var x_ax := Vector3.UP.cross(dn)
 	if x_ax.length() < 1e-4:
-		x_ax = Vector3(1, 0, 0)
+		x_ax = Vector3.RIGHT
 	x_ax = x_ax.normalized()
-	var z_ax := x_ax.cross(dn).normalized()
-	return Basis(x_ax, dn, z_ax)
+	var y_ax := dn.cross(x_ax).normalized()
+	return Basis(x_ax, y_ax, dn)
 
 func _refresh_wire(w: Dictionary) -> void:
 	var pa := _pin_world(w["a"])
@@ -883,8 +919,21 @@ func _move_dragged(o: Vector3, d: Vector3) -> void:
 	var sn := _snap_to_grid(p)
 	var hw: float = rec["aabb"].size.x * 0.5
 	var hd: float = rec["aabb"].size.z * 0.5
-	sn.x = clampf(sn.x, GRID_ORIGIN.x + hw, GRID_ORIGIN.x + GRID_SIZE.x - hw)
-	sn.z = clampf(sn.z, GRID_ORIGIN.z + hd, GRID_ORIGIN.z + GRID_SIZE.y - hd)
+	# деталь шире сетки (макетка 830) — ставим по центру, а не дёргаем clamp
+	var x_lo := GRID_ORIGIN.x + hw
+	var x_hi := GRID_ORIGIN.x + GRID_SIZE.x - hw
+	var z_lo := GRID_ORIGIN.z + hd
+	var z_hi := GRID_ORIGIN.z + GRID_SIZE.y - hd
+	if x_lo > x_hi:
+		var cx := GRID_ORIGIN.x + GRID_SIZE.x * 0.5
+		x_lo = cx
+		x_hi = cx
+	if z_lo > z_hi:
+		var cz := GRID_ORIGIN.z + GRID_SIZE.y * 0.5
+		z_lo = cz
+		z_hi = cz
+	sn.x = clampf(sn.x, x_lo, x_hi)
+	sn.z = clampf(sn.z, z_lo, z_hi)
 	rec["root"].position = sn
 	_refresh_wires()
 

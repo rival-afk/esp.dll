@@ -18,6 +18,11 @@ var _pin_states := {}   # pin -> bool
 
 func stop() -> void:
 	running = false
+	# остановка «прошивки» гасит пины, иначе на плате остаётся последний HIGH
+	for pin in _pin_states:
+		if _pin_states[pin]:
+			pin_changed.emit(pin, false)
+	_pin_states.clear()
 	_setup.clear()
 	_loop.clear()
 	_idx = 0

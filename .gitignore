@@ -3,3 +3,4 @@
 /android/
 .venv/
 *.tmp
+/build/

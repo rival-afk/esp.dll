@@ -32,7 +32,16 @@ func _init() -> void:
 	var i_led: float = sim.get_current(p_led["comp_id"])
 	var ok_circuit: bool = w1 and w2 and w3 and n_wires == 3 and not wdup \
 		and led_on and i_led > 0.008 and i_led < 0.014
-	print("wires=%d dup=%s led_on=%s I=%.4f -> %s" % [n_wires, wdup, led_on, i_led, ok_circuit])
+	# провод — брус вдоль линии пинов (локальная Z), а не вертикальная стойка
+	var w0: Dictionary = bench.wires[0]
+	var wbox: BoxMesh = w0["node"].mesh
+	var wdir: Vector3 = w0["node"].global_transform.basis.z.normalized()
+	var want_dir: Vector3 = (bench._pin_world(w0["b"]) - bench._pin_world(w0["a"])).normalized()
+	var ok_wire_dir: bool = absf(wdir.dot(want_dir)) > 0.999 and wbox.size.z > 0.01
+	print("wires=%d dup=%s led_on=%s I=%.4f dir=%s -> %s" % [
+		n_wires, wdup, led_on, i_led, ok_wire_dir, ok_circuit])
+	print("wire_dir: z*dir=%.4f len=%.3f -> %s" % [
+		wdir.dot(want_dir), wbox.size.z, ok_wire_dir])
 
 	# провод зажатием: зажал пин — потянул — отпустил над другим пином
 	var ra: String = bench.place_part("r1k")
@@ -83,7 +92,7 @@ func _init() -> void:
 		and absf(roundf(gx) - gx) < 1e-3 and absf(roundf(gz) - gz) < 1e-3
 	print("drag: yaw=%.2f pos=%s grid_ok=%s -> %s" % [yaw, pos, ok_drag, ok_drag])
 
-	if ok_place and ok_circuit and ok_wire_drag and ok_empty and ok_cancel \
+	if ok_place and ok_circuit and ok_wire_dir and ok_wire_drag and ok_empty and ok_cancel \
 			and ok_remove and ok_clear and ok_drag:
 		print("VERIFY-OK bench")
 	else:

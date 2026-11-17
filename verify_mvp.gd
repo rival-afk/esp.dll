@@ -36,7 +36,11 @@ func _init() -> void:
 	var w2: bool = bench.connect_pins(res + ":R", led + ":L")
 	var w3: bool = bench.connect_pins(led + ":R", board + ":R")
 	var ok_wires: bool = w1 and w2 and w3 and bench.wires.size() == 3
-	print("build: board=%s wires=%d -> %s" % [ok_build, bench.wires.size(), ok_build and ok_wires])
+	# модель платы не должна сжиматься до пары сантиметров (фикс осей OBJ)
+	var board_w: float = bench.get_part(board)["aabb"].size.x if board != "" else 0.0
+	var ok_model: bool = board_w > 0.03
+	print("build: board=%s wires=%d model_x=%.3f -> %s" % [
+		ok_build, bench.wires.size(), board_w, ok_model])
 
 	# 2. «прошивка»: тот же путь, что и редактор кода (vm.pin_changed -> bench)
 	var vm: Node = load("res://Scripts/sim/arduino_vm.gd").new()
@@ -76,7 +80,34 @@ func _init() -> void:
 	var ok_task: bool = bench.circuit_task_done()
 	print("task: circuit_task_done=%s -> %s" % [ok_task, ok_task])
 
-	if ok_build and ok_wires and ok_upload and ok_blink and ok_stop and ok_task:
+	# 6. закрытие редактора не останавливает прошивку: LED продолжает мигать
+	vm.stop()
+	var ce: Control = load("res://Scenes/ui/code_editor.tscn").instantiate()
+	root.add_child(ce)
+	await process_frame
+	ce.connect_pin_handler(bench.set_arduino_pin)
+	ce.board_check = bench.has_arduino
+	ce.visible = true
+	ce._on_upload()
+	var ok_upload2: bool = ce.out_label.text.begins_with("Скомпилировано") and ce._vm.running
+	for i in 100:
+		await process_frame
+	ce._on_close()
+	var flips_closed := 0
+	prev = sim.is_led_on(led_comp)
+	for i in 120:
+		await process_frame
+		var on: bool = sim.is_led_on(led_comp)
+		if on != prev:
+			flips_closed += 1
+			prev = on
+	var ok_after_close: bool = ok_upload2 and not ce.visible \
+		and ce._vm.running and flips_closed >= 1
+	print("close editor: running=%s hidden=%s flips_after=%d -> %s" % [
+		ce._vm.running, not ce.visible, flips_closed, ok_after_close])
+
+	if ok_build and ok_wires and ok_upload and ok_blink and ok_stop and ok_task \
+			and ok_model and ok_after_close:
 		print("VERIFY-OK mvp")
 	else:
 		print("VERIFY-FAIL mvp")
